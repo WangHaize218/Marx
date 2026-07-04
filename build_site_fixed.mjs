@@ -12,7 +12,10 @@ const chapterCounts = Object.create(null);
 for (const card of cards) {
   chapterCounts[card.chapter] = (chapterCounts[card.chapter] || 0) + 1;
 }
-const chapters = Object.keys(chapterCounts).sort((a, b) => chapterCounts[b] - chapterCounts[a]);
+const chapters = [];
+for (const card of cards) {
+  if (!chapters.includes(card.chapter)) chapters.push(card.chapter);
+}
 
 const quizItems = [];
 for (let i = 0; i < cards.length && quizItems.length < 12; i += 1) {
@@ -231,6 +234,7 @@ function commonHead(title) {
       min-height: clamp(430px, 72vh, 620px);
       cursor: pointer;
       overflow: hidden;
+      touch-action: pan-y;
     }
     .card-main {
       min-height: clamp(430px, 72vh, 620px);
@@ -259,6 +263,10 @@ function commonHead(title) {
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+    .mini-toggle {
+      padding: 10px 14px;
+      white-space: nowrap;
     }
     .helper-chip {
       padding: 10px 14px;
@@ -381,22 +389,26 @@ function commonHead(title) {
       width: 64px;
       height: 64px;
       border-radius: 50%;
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transform: translateY(-50%);
       pointer-events: auto;
       box-shadow: 0 14px 28px rgba(83, 66, 45, 0.14);
-      font-size: 34px;
-      line-height: 1;
       padding: 0;
     }
     .nav-float.prev { left: -84px; }
     .nav-float.next { right: -84px; }
     .nav-float:hover { transform: translateY(-50%) scale(1.04); }
     .nav-float:active { transform: translateY(-50%) scale(0.96); }
-    .nav-float span {
-      display: block;
-      transform: translateY(-1px);
+    .nav-float svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+      stroke-width: 3.2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .quiz-layout {
       display: grid;
@@ -471,35 +483,119 @@ function commonHead(title) {
       .tools, .quiz-layout {
         grid-template-columns: 1fr;
       }
+      .topbar {
+        position: static;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 18px;
+      }
+      .brand {
+        width: 100%;
+      }
+      .nav {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .nav a {
+        text-align: center;
+      }
+      .section-head {
+        margin-bottom: 10px;
+      }
+      .progress-card-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .card-stage {
+        overflow: hidden;
+      }
+      .card-top {
+        flex-direction: column;
+        align-items: stretch;
+      }
       .question-wrap h2, .quiz-question {
         max-width: none;
       }
       .helper-bar {
-        flex-wrap: wrap;
-        justify-content: flex-end;
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .helper-chip {
+        flex: 1;
+        min-width: 0;
+        white-space: normal;
+        text-align: center;
       }
       .card,
       .card-main {
-        min-height: clamp(380px, 62vh, 520px);
+        min-height: clamp(420px, 66svh, 620px);
       }
-      .nav-float.prev { left: -18px; }
-      .nav-float.next { right: -18px; }
       .nav-float {
-        width: 54px;
-        height: 54px;
-        font-size: 30px;
+        display: none;
       }
       .question-wrap {
-        padding: 8px 12px 12px;
+        padding: 12px 10px 14px;
       }
       .question-wrap h2 {
-        font-size: clamp(26px, 6vw, 40px);
+        font-size: clamp(26px, 7.4vw, 42px);
       }
       .answer-panel {
-        height: min(24vh, 170px);
+        height: min(28svh, 220px);
       }
       .answer-text {
-        font-size: clamp(20px, 4.8vw, 32px);
+        font-size: clamp(22px, 5.6vw, 34px);
+      }
+      .card-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .card-actions button,
+      .mini-toggle {
+        width: 100%;
+      }
+    }
+    @media (max-width: 640px) {
+      .shell {
+        width: min(calc(100% - 16px), var(--max));
+        margin: 10px auto 24px;
+      }
+      .topbar,
+      .progress-card,
+      .card-shell,
+      .quiz-card,
+      .result-card {
+        border-radius: 24px;
+      }
+      .brand strong {
+        font-size: 18px;
+      }
+      .brand span {
+        font-size: 13px;
+      }
+      .section-head h1 {
+        font-size: clamp(24px, 8vw, 34px);
+      }
+      .pill {
+        align-self: flex-start;
+      }
+      .mastery-btn {
+        width: 48px;
+        height: 48px;
+      }
+      .question-wrap h2 {
+        font-size: clamp(24px, 8.8vw, 38px);
+        line-height: 1.18;
+      }
+      .question-index {
+        font-size: 16px;
+      }
+      .question-foot {
+        padding-bottom: 4px;
+      }
+      .answer-panel {
+        padding: 18px 18px 22px;
       }
     }
   </style>
@@ -546,8 +642,12 @@ function buildIndexHtml() {
     </div>
 
     <div class="card-stage">
-      <button class="nav-float prev" id="prevBtn" type="button" aria-label="上一题"><span>‹</span></button>
-      <button class="nav-float next" id="nextBtn" type="button" aria-label="下一题"><span>›</span></button>
+      <button class="nav-float prev" id="prevBtn" type="button" aria-label="上一题">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"></path></svg>
+      </button>
+      <button class="nav-float next" id="nextBtn" type="button" aria-label="下一题">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      </button>
       <div class="card-shell">
         <div class="card" id="flashcard">
         <div class="card-main">
@@ -578,6 +678,7 @@ function buildIndexHtml() {
     </div>
 
     <div class="card-actions">
+      <button id="pinAnswerBtn" class="toggle mini-toggle" type="button">保持答案</button>
       <button id="shuffleBtn" type="button">随机重排</button>
       <button id="resetMasteryBtn" type="button">清空掌握记录</button>
     </div>
@@ -595,6 +696,7 @@ function buildIndexHtml() {
       chapter: "all",
       mode: "all",
       currentId: cards[0] ? cards[0].id : null,
+      pinAnswer: false,
       showAnswer: false,
       shuffleOrder: cards.map((card) => card.id),
       mastered: readJson(storageKeys.mastery, [])
@@ -604,6 +706,7 @@ function buildIndexHtml() {
       chapterFilter: document.getElementById("chapterFilter"),
       modeAll: document.getElementById("modeAll"),
       modeWeak: document.getElementById("modeWeak"),
+      pinAnswerBtn: document.getElementById("pinAnswerBtn"),
       flashcard: document.getElementById("flashcard"),
       flashStep: document.getElementById("flashStep"),
       flashChapter: document.getElementById("flashChapter"),
@@ -617,6 +720,24 @@ function buildIndexHtml() {
       shuffleBtn: document.getElementById("shuffleBtn"),
       resetMasteryBtn: document.getElementById("resetMasteryBtn")
     };
+    const swipe = {
+      startX: 0,
+      startY: 0,
+      tracking: false,
+      suppressClick: false
+    };
+
+    function syncAnswerMode() {
+      const keepAnswerVisible = state.pinAnswer || state.showAnswer;
+      el.pinAnswerBtn.classList.toggle("active", state.pinAnswer);
+      el.pinAnswerBtn.textContent = state.pinAnswer ? "隐藏答案" : "保持答案";
+      el.pinAnswerBtn.setAttribute("aria-pressed", state.pinAnswer ? "true" : "false");
+      el.flashcard.classList.toggle("show", keepAnswerVisible);
+      const foot = document.querySelector(".question-foot");
+      if (foot) {
+        foot.textContent = state.pinAnswer ? "当前保持显示答案" : "点击显示答案";
+      }
+    }
 
     function readJson(key, fallback) {
       try {
@@ -656,12 +777,13 @@ function buildIndexHtml() {
     function renderCards() {
       const list = filteredCards();
       const card = currentCard(list);
-      const masteryRate = cards.length ? Math.round((state.mastered.length / cards.length) * 100) : 0;
+      const masteryRate = cards.length ? (state.mastered.length / cards.length) * 100 : 0;
 
       el.masteryText.textContent = "已掌握 " + state.mastered.length + " / " + cards.length;
       el.masteryBar.style.width = masteryRate + "%";
       el.modeAll.classList.toggle("active", state.mode === "all");
       el.modeWeak.classList.toggle("active", state.mode === "weak");
+      syncAnswerMode();
 
       if (!card) {
         el.flashStep.textContent = "EMPTY";
@@ -669,7 +791,7 @@ function buildIndexHtml() {
         el.flashQuestion.textContent = "当前筛选下没有待复习内容。";
         el.flashAnswer.textContent = "切回“显示全部”或者换个章节继续刷。";
         el.masteryBtn.classList.remove("active");
-        el.flashcard.classList.remove("show");
+        syncAnswerMode();
         return;
       }
 
@@ -679,7 +801,7 @@ function buildIndexHtml() {
       el.flashQuestion.textContent = card.question;
       el.flashAnswer.textContent = card.answer;
       el.masteryBtn.classList.toggle("active", state.mastered.includes(card.id));
-      el.flashcard.classList.toggle("show", state.showAnswer);
+      syncAnswerMode();
     }
 
     function moveCard(step) {
@@ -688,7 +810,7 @@ function buildIndexHtml() {
       const index = list.findIndex((card) => card.id === state.currentId);
       const next = (index + step + list.length) % list.length;
       state.currentId = list[next].id;
-      state.showAnswer = false;
+      state.showAnswer = state.pinAnswer;
       renderCards();
     }
 
@@ -706,25 +828,67 @@ function buildIndexHtml() {
     }
 
     function bind() {
+      function isInteractiveTarget(target) {
+        return Boolean(target.closest("button, select, a, input, textarea, label"));
+      }
+
       el.chapterFilter.addEventListener("change", (event) => {
         state.chapter = event.target.value;
-        state.showAnswer = false;
+        state.showAnswer = state.pinAnswer;
         renderCards();
       });
       el.modeAll.addEventListener("click", () => {
         state.mode = "all";
-        state.showAnswer = false;
+        state.showAnswer = state.pinAnswer;
         renderCards();
       });
       el.modeWeak.addEventListener("click", () => {
         state.mode = "weak";
-        state.showAnswer = false;
+        state.showAnswer = state.pinAnswer;
+        renderCards();
+      });
+      el.pinAnswerBtn.addEventListener("click", (event) => {
+        state.pinAnswer = !state.pinAnswer;
+        state.showAnswer = state.pinAnswer;
+        if (!state.pinAnswer) {
+          el.flashcard.classList.remove("show");
+        }
         renderCards();
       });
       el.flashcard.addEventListener("click", () => {
+        if (swipe.suppressClick) {
+          swipe.suppressClick = false;
+          return;
+        }
+        if (state.pinAnswer) return;
         state.showAnswer = !state.showAnswer;
         renderCards();
       });
+      el.flashcard.addEventListener("touchstart", (event) => {
+        if (event.touches.length !== 1 || isInteractiveTarget(event.target)) {
+          swipe.tracking = false;
+          return;
+        }
+        const touch = event.touches[0];
+        swipe.startX = touch.clientX;
+        swipe.startY = touch.clientY;
+        swipe.tracking = true;
+      }, { passive: true });
+      el.flashcard.addEventListener("touchend", (event) => {
+        if (!swipe.tracking || event.changedTouches.length !== 1) return;
+        swipe.tracking = false;
+        const touch = event.changedTouches[0];
+        const deltaX = touch.clientX - swipe.startX;
+        const deltaY = touch.clientY - swipe.startY;
+        if (Math.abs(deltaX) < 56 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+          return;
+        }
+        swipe.suppressClick = true;
+        moveCard(deltaX < 0 ? 1 : -1);
+        setTimeout(() => {
+          swipe.suppressClick = false;
+        }, 260);
+      }, { passive: true });
       el.masteryBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         toggleMastery();
@@ -733,7 +897,7 @@ function buildIndexHtml() {
       el.nextBtn.addEventListener("click", () => moveCard(1));
       el.shuffleBtn.addEventListener("click", () => {
         state.shuffleOrder = cards.map((card) => card.id).sort(() => Math.random() - 0.5);
-        state.showAnswer = false;
+        state.showAnswer = state.pinAnswer;
         renderCards();
       });
       el.resetMasteryBtn.addEventListener("click", () => {
@@ -744,6 +908,7 @@ function buildIndexHtml() {
       document.addEventListener("keydown", (event) => {
         if (event.code === "Space") {
           event.preventDefault();
+          if (state.pinAnswer) return;
           state.showAnswer = !state.showAnswer;
           renderCards();
         } else if (event.code === "ArrowRight") {
